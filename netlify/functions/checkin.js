@@ -4,7 +4,7 @@
 // Airtable. The Airtable Personal Access Token lives only here, as a
 // Netlify environment variable — never in the browser-side code.
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
