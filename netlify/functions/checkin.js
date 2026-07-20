@@ -16,6 +16,17 @@ export const handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON" }) };
   }
 
+  // Honeypot check — this field is invisible in the real form and only a bot
+  // filling in every field it finds would ever populate it. If it has any
+  // value, silently pretend success without touching Airtable at all, so the
+  // bot doesn't learn its submission was rejected and keep retrying.
+  if (payload.companyWebsite && payload.companyWebsite.trim() !== "") {
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ success: true, recordId: null }),
+    };
+  }
+
   const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN;
   const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
   const AIRTABLE_TABLE_NAME = process.env.AIRTABLE_TABLE_NAME || "Check-Ins";
@@ -41,6 +52,7 @@ export const handler = async (event) => {
     "Guardian Name": payload.guardianName || "",
     "Opt In Updates": !!payload.optInUpdates,
     "Submitted At": payload.submittedAt || new Date().toISOString(),
+    Event: payload.event || "",
   };
 
   try {
