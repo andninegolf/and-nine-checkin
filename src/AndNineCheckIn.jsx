@@ -150,6 +150,7 @@ function initialState() {
 export default function AndNineCheckIn({ onSubmit } = {}) {
   const [form, setForm] = useState(initialState());
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [errors, setErrors] = useState({});
 
   function update(field, value) {
@@ -171,7 +172,7 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
     return Object.keys(e).length === 0;
   }
 
-  function handleSubmit(ev) {
+  async function handleSubmit(ev) {
     ev.preventDefault();
     if (!validate()) return;
 
@@ -191,12 +192,32 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
       submittedAt: new Date().toISOString(),
     };
 
-    if (typeof onSubmit === "function") {
-      onSubmit(payload);
-    } else {
-      console.log("& Nine check-in submitted:", payload);
+    setSubmitError("");
+
+    const submitFn =
+      typeof onSubmit === "function"
+        ? onSubmit
+        : async (data) => {
+            const response = await fetch("/.netlify/functions/checkin", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data),
+            });
+            if (!response.ok) {
+              const text = await response.text();
+              throw new Error(text || "Check-in could not be saved.");
+            }
+          };
+
+    try {
+      await submitFn(payload);
+      setSubmitted(true);
+    } catch (err) {
+      console.error("& Nine check-in failed:", err);
+      setSubmitError(
+        "Something went wrong saving your check-in. Please try again, or let a staff member know."
+      );
     }
-    setSubmitted(true);
   }
 
   function resetForm() {
@@ -447,6 +468,8 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
               />
               <span>Keep me posted on future & Nine events and offers from our partners.</span>
             </label>
+
+            {submitError && <div style={styles.submitErrorText}>{submitError}</div>}
 
             <button type="submit" className="an-btn" style={styles.submitBtn}>
               Check in
@@ -717,6 +740,15 @@ const styles = {
     color: "#A6402C",
     fontSize: 12.5,
     marginTop: 4,
+  },
+  submitErrorText: {
+    color: "#A6402C",
+    fontSize: 13.5,
+    fontWeight: 600,
+    padding: "10px 14px",
+    background: "#FBEAE6",
+    border: "1px solid #E0A692",
+    borderRadius: 3,
   },
   submitBtn: {
     marginTop: 4,
