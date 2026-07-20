@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 /**
  * & Nine — Event Check-In
@@ -47,7 +47,9 @@ involves inherent risks, including but not limited to:
 I understand that & Nine offers standard golf balls by default, and that
 foam training balls are available on request as a lower-impact alternative
 that reduces (but does not eliminate) the risk of ricochet-related injury.
-I have been informed of this option and have made my choice below.
+I have been informed of this option and understand I should let an & Nine
+staff member know before my turn if I would like to use foam training
+balls instead of standard golf balls.
 
 I voluntarily assume all of the risks described above, whether or not
 specifically listed, and understand that no amount of care or caution by
@@ -62,7 +64,16 @@ due to ORDINARY NEGLIGENCE. This release does not cover gross negligence
 or willful misconduct.
 
 I confirm that I am physically able to participate and will follow all
-instructions given by & Nine staff regarding equipment and safe play.`;
+instructions given by & Nine staff regarding equipment and safe play.
+
+PHOTOGRAPHY & MEDIA RELEASE
+
+Photography and video recording may occur during this event. As a
+condition of participating, I grant & Nine permission to photograph,
+record, and use my image, likeness, voice, and appearance for
+promotional, educational, advertising, and other lawful business
+purposes, including social media, the & Nine website, and printed or
+digital marketing materials, without additional notice or compensation.`;
 
 const WAIVER_TEXT_MINOR = `WAIVER AND RELEASE OF LIABILITY — SIGNED BY PARENT / GUARDIAN
 
@@ -86,8 +97,9 @@ experience involves inherent risks, including but not limited to:
 I understand that & Nine offers standard golf balls by default, and that
 foam training balls are available on request as a lower-impact alternative
 that reduces (but does not eliminate) the risk of ricochet-related injury.
-I have been informed of this option and have made my choice on behalf of
-the minor below.
+I have been informed of this option and understand I should let an & Nine
+staff member know before the minor's turn if I would like the minor to
+use foam training balls instead of standard golf balls.
 
 I voluntarily assume all of the risks described above on behalf of the
 minor named in this form, whether or not specifically listed, and
@@ -109,7 +121,17 @@ informed of the risks described above and agreed to them on the minor's
 behalf for purposes of participation today.
 
 I confirm the minor is physically able to participate and will follow all
-instructions given by & Nine staff regarding equipment and safe play.`;
+instructions given by & Nine staff regarding equipment and safe play.
+
+PHOTOGRAPHY & MEDIA RELEASE
+
+Photography and video recording may occur during this event. As a
+condition of participating, I, as the participant's parent or legal
+guardian, grant & Nine permission to photograph, record, and use the
+minor's image, likeness, voice, and appearance for promotional,
+educational, advertising, and other lawful business purposes, including
+social media, the & Nine website, and printed or digital marketing
+materials, without additional notice or compensation.`;
 
 const SAFETY_RULES = [
   "Check that your swing area and the space behind you are clear before taking a swing.",
@@ -138,6 +160,8 @@ function initialState() {
     minorName: "",
     signature: "",
     optIn: false,
+    companyWebsite: "",
+    event: "",
   };
 }
 
@@ -150,6 +174,18 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
   }
+
+  // Read the event tag from the URL once, on page load — e.g. a link like
+  // https://checkin.andninegolf.com/?event=WSCPA-Aug20 silently tags every
+  // submission from that page with "WSCPA-Aug20", no guest interaction needed.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const eventTag = params.get("event");
+    if (eventTag) {
+      update("event", eventTag);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function validate() {
     const e = {};
@@ -181,6 +217,8 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
       minorName: form.isMinor ? form.minorName.trim() : null,
       guardianName: form.isMinor ? form.name.trim() : null,
       optInUpdates: form.optIn,
+      companyWebsite: form.companyWebsite,
+      event: form.event,
       submittedAt: new Date().toISOString(),
     };
 
@@ -254,6 +292,22 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
           <ConfirmationView name={form.name} onReset={resetForm} />
         ) : (
           <form onSubmit={handleSubmit} noValidate style={styles.form}>
+            {/* Honeypot field — invisible to real guests, only a bot filling every
+                field it finds would ever populate this. Checked server-side in the
+                Netlify function; never rely on hiding this client-side alone. */}
+            <div style={styles.honeypotWrap} aria-hidden="true">
+              <label htmlFor="company-website">Company Website</label>
+              <input
+                id="company-website"
+                name="companyWebsite"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={form.companyWebsite}
+                onChange={(e) => update("companyWebsite", e.target.value)}
+              />
+            </div>
+
             {/* Name + Email */}
             <div style={styles.grid2}>
               <Field label={form.isMinor ? "Your full name (parent / guardian)" : "Full name"} error={errors.name}>
@@ -404,8 +458,8 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
                 />
                 <span>
                   {form.isMinor
-                    ? "I am the parent or legal guardian of the minor named above. I have read the waiver above and agree to its terms as described."
-                    : "I have read and agree to the waiver and release of liability above."}
+                    ? "I am the parent or legal guardian of the minor named above. I have read and agree to the terms of this Waiver and Release, including the Photography & Media Release."
+                    : "I have read and agree to the terms of this Waiver and Release, including the Photography & Media Release."}
                 </span>
               </label>
               {errors.waiver && <div style={styles.errorText}>{errors.waiver}</div>}
@@ -476,6 +530,14 @@ function ConfirmationView({ name, onReset }) {
 }
 
 const styles = {
+  honeypotWrap: {
+    position: "absolute",
+    left: "-9999px",
+    top: "-9999px",
+    width: "1px",
+    height: "1px",
+    overflow: "hidden",
+  },
   page: {
     minHeight: "100vh",
     width: "100%",
