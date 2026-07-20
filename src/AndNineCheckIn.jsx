@@ -111,11 +111,6 @@ behalf for purposes of participation today.
 I confirm the minor is physically able to participate and will follow all
 instructions given by & Nine staff regarding equipment and safe play.`;
 
-const BALL_TYPES = [
-  { value: "standard", label: "Standard golf balls" },
-  { value: "foam", label: "Foam training balls" },
-];
-
 const SAFETY_RULES = [
   "Check that your swing area and the space behind you are clear before taking a swing.",
   "Stay clear of others' swing paths and simulator bays at all times.",
@@ -137,7 +132,6 @@ function initialState() {
     email: "",
     hand: "",
     experience: "",
-    ballType: "",
     waiverAgreed: false,
     safetyRulesAgreed: false,
     isMinor: false,
@@ -163,7 +157,6 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
     if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = "Enter a valid email.";
     if (!form.hand) e.hand = "Choose a hand.";
     if (!form.experience) e.experience = "Choose an experience level.";
-    if (!form.ballType) e.ballType = "Choose a ball type.";
     if (!form.waiverAgreed) e.waiver = "Agreement to the waiver is required to check in.";
     if (!form.safetyRulesAgreed) e.safetyRules = "Agreement to the safety rules is required to check in.";
     if (!form.signature.trim()) e.signature = "Type your full name as your signature.";
@@ -181,7 +174,6 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
       email: form.email.trim(),
       dominantHand: form.hand,
       experienceLevel: form.experience,
-      ballType: form.ballType,
       waiverAgreed: true,
       safetyRulesAgreed: true,
       signature: form.signature.trim(),
@@ -358,36 +350,6 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
                     <span style={styles.expHint}>{lvl.hint}</span>
                   </label>
                 ))}
-              </div>
-            </Field>
-
-            {/* Ball type — informed choice, tied to the ricochet risk in the waiver below */}
-            <Field label="Which would you like to use today?" error={errors.ballType}>
-              <div style={styles.radioRow}>
-                {BALL_TYPES.map((b) => (
-                  <label
-                    key={b.value}
-                    className="an-radio-card"
-                    style={{
-                      ...styles.radioCard,
-                      ...(form.ballType === b.value ? styles.radioCardActive : {}),
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="ballType"
-                      value={b.value}
-                      checked={form.ballType === b.value}
-                      onChange={() => update("ballType", b.value)}
-                      style={styles.hiddenRadio}
-                    />
-                    {b.label}
-                  </label>
-                ))}
-              </div>
-              <div style={styles.ballTypeHint}>
-                Foam training balls are available at no extra cost and reduce the chance of
-                ricochet-related injury described below.
               </div>
             </Field>
 
@@ -698,11 +660,6 @@ const styles = {
   },
   safetyItem: {
     marginBottom: 4,
-  },
-  ballTypeHint: {
-    fontSize: 12.5,
-    color: "#7a7266",
-    marginTop: 4,
   },
   waiverHeaderRow: {
     display: "flex",
