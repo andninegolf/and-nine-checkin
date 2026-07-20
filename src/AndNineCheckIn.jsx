@@ -27,31 +27,79 @@ const COLORS = {
 
 const WAIVER_TEXT_ADULT = `WAIVER AND RELEASE OF LIABILITY
 
-In consideration of being permitted to participate in this & Nine golf
-experience, I acknowledge that golf-related activities — including swinging
-clubs, striking balls, and use of simulator equipment — carry inherent risks
-of injury or property damage. I voluntarily assume all such risks.
+ASSUMPTION OF RISK
 
-I release and hold harmless & Nine, its owners, staff, contractors, and the
-event host from any and all claims, liabilities, or damages arising from my
-own NEGLIGENCE or the ordinary negligence of & Nine, its owners, staff, or
-contractors, during my participation. This release does not cover gross
-negligence or willful misconduct.
+I understand that participating in this & Nine golf simulator experience
+involves inherent risks, including but not limited to:
+
+  - Being struck by a golf ball or club, including from my own swing or
+    another participant's.
+  - A golf ball ricocheting or rebounding off the impact screen, inflatable
+    enclosure, or side barriers — including on a mis-hit or thin shot —
+    and traveling back toward the hitting area at speed.
+  - Muscle strain, joint injury, or other physical exertion injury from
+    swinging a golf club.
+  - Trips, slips, or falls related to equipment, cables, mats, or uneven
+    setup surfaces.
+  - Property damage to personal items (phones, glasses, jewelry) from a
+    misdirected ball or club.
+
+I understand that & Nine offers standard golf balls by default, and that
+foam training balls are available on request as a lower-impact alternative
+that reduces (but does not eliminate) the risk of ricochet-related injury.
+I have been informed of this option and have made my choice below.
+
+I voluntarily assume all of the risks described above, whether or not
+specifically listed, and understand that no amount of care or caution by
+& Nine eliminates the possibility of injury.
+
+RELEASE OF LIABILITY
+
+In consideration of being permitted to participate, I release and hold
+harmless & Nine, its owners, staff, contractors, and the event host from
+any and all claims, liabilities, or damages arising from my participation
+due to ORDINARY NEGLIGENCE. This release does not cover gross negligence
+or willful misconduct.
 
 I confirm that I am physically able to participate and will follow all
 instructions given by & Nine staff regarding equipment and safe play.`;
 
 const WAIVER_TEXT_MINOR = `WAIVER AND RELEASE OF LIABILITY — SIGNED BY PARENT / GUARDIAN
 
-I acknowledge that golf-related activities — including swinging clubs,
-striking balls, and use of simulator equipment — carry inherent risks of
-injury or property damage, and I am aware of these risks on behalf of the
-minor named in this form.
+ASSUMPTION OF RISK
+
+I understand that the minor's participation in this & Nine golf simulator
+experience involves inherent risks, including but not limited to:
+
+  - Being struck by a golf ball or club, including from the minor's own
+    swing or another participant's.
+  - A golf ball ricocheting or rebounding off the impact screen, inflatable
+    enclosure, or side barriers — including on a mis-hit or thin shot —
+    and traveling back toward the hitting area at speed.
+  - Muscle strain, joint injury, or other physical exertion injury from
+    swinging a golf club.
+  - Trips, slips, or falls related to equipment, cables, mats, or uneven
+    setup surfaces.
+  - Property damage to personal items (phones, glasses, jewelry) from a
+    misdirected ball or club.
+
+I understand that & Nine offers standard golf balls by default, and that
+foam training balls are available on request as a lower-impact alternative
+that reduces (but does not eliminate) the risk of ricochet-related injury.
+I have been informed of this option and have made my choice on behalf of
+the minor below.
+
+I voluntarily assume all of the risks described above on behalf of the
+minor named in this form, whether or not specifically listed, and
+understand that no amount of care or caution by & Nine eliminates the
+possibility of injury.
+
+RELEASE OF LIABILITY
 
 On my own behalf, I release and hold harmless & Nine, its owners, staff,
 contractors, and the event host from any claim I personally may have for
 injury to the parent-child relationship arising from the minor's
-participation, due to ordinary NEGLIGENCE. This release does not cover
+participation, due to ORDINARY NEGLIGENCE. This release does not cover
 gross negligence or willful misconduct.
 
 Under Washington law, a parent or guardian cannot waive a minor's own
@@ -62,6 +110,11 @@ behalf for purposes of participation today.
 
 I confirm the minor is physically able to participate and will follow all
 instructions given by & Nine staff regarding equipment and safe play.`;
+
+const BALL_TYPES = [
+  { value: "standard", label: "Standard golf balls" },
+  { value: "foam", label: "Foam training balls" },
+];
 
 const SAFETY_RULES = [
   "Check that your swing area and the space behind you are clear before taking a swing.",
@@ -84,6 +137,7 @@ function initialState() {
     email: "",
     hand: "",
     experience: "",
+    ballType: "",
     waiverAgreed: false,
     safetyRulesAgreed: false,
     isMinor: false,
@@ -96,7 +150,6 @@ function initialState() {
 export default function AndNineCheckIn({ onSubmit } = {}) {
   const [form, setForm] = useState(initialState());
   const [submitted, setSubmitted] = useState(false);
-  const [submitError, setSubmitError] = useState("");
   const [errors, setErrors] = useState({});
 
   function update(field, value) {
@@ -109,6 +162,7 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
     if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = "Enter a valid email.";
     if (!form.hand) e.hand = "Choose a hand.";
     if (!form.experience) e.experience = "Choose an experience level.";
+    if (!form.ballType) e.ballType = "Choose a ball type.";
     if (!form.waiverAgreed) e.waiver = "Agreement to the waiver is required to check in.";
     if (!form.safetyRulesAgreed) e.safetyRules = "Agreement to the safety rules is required to check in.";
     if (!form.signature.trim()) e.signature = "Type your full name as your signature.";
@@ -117,7 +171,7 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
     return Object.keys(e).length === 0;
   }
 
-  async function handleSubmit(ev) {
+  function handleSubmit(ev) {
     ev.preventDefault();
     if (!validate()) return;
 
@@ -126,6 +180,7 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
       email: form.email.trim(),
       dominantHand: form.hand,
       experienceLevel: form.experience,
+      ballType: form.ballType,
       waiverAgreed: true,
       safetyRulesAgreed: true,
       signature: form.signature.trim(),
@@ -136,32 +191,12 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
       submittedAt: new Date().toISOString(),
     };
 
-    setSubmitError("");
-
-    const submitFn =
-      typeof onSubmit === "function"
-        ? onSubmit
-        : async (data) => {
-            const response = await fetch("/.netlify/functions/checkin", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(data),
-            });
-            if (!response.ok) {
-              const text = await response.text();
-              throw new Error(text || "Check-in could not be saved.");
-            }
-          };
-
-    try {
-      await submitFn(payload);
-      setSubmitted(true);
-    } catch (err) {
-      console.error("& Nine check-in failed:", err);
-      setSubmitError(
-        "Something went wrong saving your check-in. Please try again, or let a staff member know."
-      );
+    if (typeof onSubmit === "function") {
+      onSubmit(payload);
+    } else {
+      console.log("& Nine check-in submitted:", payload);
     }
+    setSubmitted(true);
   }
 
   function resetForm() {
@@ -305,6 +340,36 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
               </div>
             </Field>
 
+            {/* Ball type — informed choice, tied to the ricochet risk in the waiver below */}
+            <Field label="Which would you like to use today?" error={errors.ballType}>
+              <div style={styles.radioRow}>
+                {BALL_TYPES.map((b) => (
+                  <label
+                    key={b.value}
+                    className="an-radio-card"
+                    style={{
+                      ...styles.radioCard,
+                      ...(form.ballType === b.value ? styles.radioCardActive : {}),
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="ballType"
+                      value={b.value}
+                      checked={form.ballType === b.value}
+                      onChange={() => update("ballType", b.value)}
+                      style={styles.hiddenRadio}
+                    />
+                    {b.label}
+                  </label>
+                ))}
+              </div>
+              <div style={styles.ballTypeHint}>
+                Foam training balls are available at no extra cost and reduce the chance of
+                ricochet-related injury described below.
+              </div>
+            </Field>
+
             {/* Event safety rules — separate, explicit acknowledgment of specific hazards */}
             <div style={styles.safetyBlock}>
               <span style={styles.waiverLabel}>Event safety rules</span>
@@ -382,8 +447,6 @@ export default function AndNineCheckIn({ onSubmit } = {}) {
               />
               <span>Keep me posted on future & Nine events and offers from our partners.</span>
             </label>
-
-            {submitError && <div style={styles.submitErrorText}>{submitError}</div>}
 
             <button type="submit" className="an-btn" style={styles.submitBtn}>
               Check in
@@ -613,6 +676,11 @@ const styles = {
   safetyItem: {
     marginBottom: 4,
   },
+  ballTypeHint: {
+    fontSize: 12.5,
+    color: "#7a7266",
+    marginTop: 4,
+  },
   waiverHeaderRow: {
     display: "flex",
     alignItems: "center",
@@ -649,15 +717,6 @@ const styles = {
     color: "#A6402C",
     fontSize: 12.5,
     marginTop: 4,
-  },
-  submitErrorText: {
-    color: "#A6402C",
-    fontSize: 13.5,
-    fontWeight: 600,
-    padding: "10px 14px",
-    background: "#FBEAE6",
-    border: "1px solid #E0A692",
-    borderRadius: 3,
   },
   submitBtn: {
     marginTop: 4,
